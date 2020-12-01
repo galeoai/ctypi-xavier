@@ -1,21 +1,45 @@
 #include "opencv2/opencv.hpp"
 #include <stdio.h>
+#include "ctypi_base.h"
+#include "ctypi_kernel.h"
+#include <chrono>
+
+
 using namespace cv;
 
 int main(int argc, char *argv[])
 {
-    //uint16_t *im1;
-    //Mat img1 = imread("../data/images/raw.tif", IMREAD_ANYDEPTH);
-    //im1 = img1.ptr<uint16_t>(0);
-    // 
-    //uint16_t *im2;
-    //Mat img2 = imread("../data/images/raw.tif", IMREAD_ANYDEPTH);
-    //im2 = img2.ptr<uint16_t>(0);
-    // 
-    //float dx=0,dy=0;
-    //int Height = im1.cols;
-    //int Width = im1.rows;
+    uint16_t *im1;
+    Mat img1 = imread("../data/images/raw.tif", IMREAD_ANYDEPTH);
+    im1 = img1.ptr<uint16_t>(0);
+     
+    uint16_t *im2;
+    Mat img2 = imread("../data/images/raw.tif", IMREAD_ANYDEPTH);
+    im2 = img2.ptr<uint16_t>(0);
+
+    uint16_t *out;
+    Mat m_out = Mat::zeros(img1.rows,img1.cols,img1.type());
+    out = m_out.ptr<uint16_t>(0);
+
+     
+    float dx=0,dy=0;
+    int Height = img1.cols;
+    int Width = img1.rows;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    ctypi_v3_base(dx,dy,im1,im2,Height,Width);
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     
-    printf("hello-world\n");
+    printf("cpu: dx=%f, dy=%f ===> duration = %ld[ms] \n",dx, dy, duration.count()/1000);
+
+    start = std::chrono::high_resolution_clock::now();
+    GPUdiff(out,im1,im2,2048*2048);
+    stop = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
+
+    imwrite("../data/images/diff.tif", m_out);
+    
     return 0;
 }
