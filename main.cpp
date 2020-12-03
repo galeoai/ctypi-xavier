@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     float dx=0,dy=0;
     int Height = img1.cols;
     int Width = img1.rows;
-
+    printf("image size: (%d, %d)\n", Height, Width);
     auto start = std::chrono::high_resolution_clock::now();
     ctypi_v3_base(dx,dy,im1,im2,Height,Width);
     auto stop = std::chrono::high_resolution_clock::now();
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     printf("cpu: dx=%f, dy=%f ===> duration = %ld[ms] \n",dx, dy, duration.count()/1000);
 
     start = std::chrono::high_resolution_clock::now();
-    GPUdiff(out,im1,im2,2048*2048);
+    GPUdiff(out,im1,im2,Height*Width);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);

@@ -1,4 +1,4 @@
-#define THREADS 256
+#define THREADS 512
 #include <cstdint>
 #include <stdio.h>
 
@@ -22,8 +22,9 @@ __constant__ float c1[KERNEL_LENGTH] = {
 // out = im1-im2 
 __global__ void diff(uint16_t *out, uint16_t *im1,uint16_t *im2, int size){
     int i = blockIdx.x*blockDim.x + threadIdx.x;
-    if (i<size) out[i] = im1[i]-im2[i];
-    printf("i = %d\n", i);
+    if (i<size) {
+	out[i] = im1[i]-im2[i];
+    };
 };
 
 void GPUdiff(uint16_t *out, uint16_t *im1,uint16_t *im2, int size){
@@ -32,17 +33,23 @@ void GPUdiff(uint16_t *out, uint16_t *im1,uint16_t *im2, int size){
     cudaHostGetDevicePointer((void **)&d_out, (void *)out, 0);
     uint16_t *d_im1 = NULL;
     cudaHostRegister(im1, size*sizeof(uint16_t), cudaHostRegisterMapped);
-    cudaHostGetDevicePointer((void **)&im1, (void *)im1, 0);
+    cudaHostGetDevicePointer((void **)&d_im1, (void *)im1, 0);
     uint16_t *d_im2 = NULL;
     cudaHostRegister(im2, size*sizeof(uint16_t), cudaHostRegisterMapped);
-    cudaHostGetDevicePointer((void **)&im2, (void *)im2, 0);
+    cudaHostGetDevicePointer((void **)&d_im2, (void *)im2, 0);
 
     int threadsPerBlock = THREADS;
     int blocksPerGrid =(size + threadsPerBlock - 1) / threadsPerBlock;
 
-    //diff<<<blocksPerGrid,threadsPerBlock>>>(d_out,d_im1,d_im2,size);
-    diff<<<10,1>>>(d_out,d_im1,d_im2,size);
+    diff<<<blocksPerGrid,threadsPerBlock>>>(d_out,d_im1,d_im2,size);
+    //printf("calling the kernel\n");
+    //cudaDeviceSynchronize();
+    //cudaError_t cudaerr = cudaDeviceSynchronize();
+    //if (cudaerr != cudaSuccess)
+    //    printf("kernel launch failed with error \"%s\".\n",
+    //           cudaGetErrorString(cudaerr));
     
+    //printf("done\n");
     // clean up
     cudaHostUnregister(d_out);
     cudaHostUnregister(d_im1);
