@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "ctypi_base.h"
 #include "ctypi_kernel.h"
+#include <cstdint>
 #include <chrono>
 
 
@@ -34,7 +35,8 @@ int main(int argc, char *argv[])
     printf("cpu: dx=%f, dy=%f ===> duration = %ld[ms] \n",dx, dy, duration.count()/1000);
 
     start = std::chrono::high_resolution_clock::now();
-    GPUdiff(out,im1,im2,Height*Width);
+    GPUdiff(out, im1, im2, Width*Height);
+    GPUfilter_x(out, im1, Width, Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);

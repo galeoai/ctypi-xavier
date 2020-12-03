@@ -19,8 +19,11 @@ main.o:main.cpp
 cytpi_base.o:cytpi_base.cpp
 	$(CXX) -c $(CFLAGS) $< -o $@
 
-$(obj_cuda): $(src_cuda)
-	nvcc -c $(CUDAFLAGS) $< -o $@ 
+ctypi_kernel.o: ctypi_kernel.cu
+	nvcc -c $(CUDAFLAGS) $< -o $@
+
+nuc_kernel.o: nuc_kernel.cu
+	nvcc -c $(CUDAFLAGS) $< -o $@
 
 .PHONY: clean
 clean:

@@ -66,12 +66,53 @@ __global__ void filter_x(uint16_t *out,
 {
     int i0 = blockIdx.x*blockDim.x + threadIdx.x;
     int i1 = blockIdx.y*blockDim.y + threadIdx.y;
-    
+
+    //copy line to shared memory
+    //int  ind = threadIdx.x;
+    //__shared__ uint16_t tmp[THREADS];
+    //tmp[ind] = in[i0+imageH*i1];
+    //__syncthreads();
+    // 
     //for (int j0 = -KERNEL_RADIUS; j0 < KERNEL_RADIUS; ++j0) {
-    // 	if( ((i0+j0)=>0) && ((i0+j0)<imageW)) {
-    // 	    out[i0+imageH*i1]+=in[i0+imageH*i1+j0]*c1[KERNEL_RADIUS+j0];
+    // 	if( ((ind+j0)>=0) && ((ind+j0)<)) {
+    // 	    out[i0+imageH*i1]+=tmp[ind+j0]*c1[KERNEL_RADIUS+j0];
     // 	};
     //};
+    #pragma unroll
+    for (int j0 = -KERNEL_RADIUS; j0 < KERNEL_RADIUS; ++j0) {
+	//if( ((i0+j0)>=0) && ((i0+j0)<imageW)) {
+	out[i0+imageH*i1] += in[i0+imageH*i1+j0]*c1[KERNEL_RADIUS+j0];
+	//};
+    };
+
 };
 
 
+void GPUfilter_x(uint16_t *out, uint16_t *in,int imageW,int imageH){
+    int size = imageW*imageH;
+    uint16_t *d_out = NULL;
+    cudaHostRegister(out, size*sizeof(uint16_t), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_out, (void *)out, 0);
+    uint16_t *d_in = NULL;
+    cudaHostRegister(in, size*sizeof(uint16_t), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_in, (void *)in, 0);
+
+    //int threadsPerBlock = THREADS;
+    //int blocksPerGrid =(size + threadsPerBlock - 1) / threadsPerBlock;
+
+    dim3 threadsPerBlock(512,1);
+    dim3 numBlocks(imageW/threadsPerBlock.x, imageH/threadsPerBlock.y);
+    
+    filter_x<<<numBlocks,threadsPerBlock>>>(d_out,d_in,imageW,imageH);
+    //printf("calling the kernel\n");
+    //cudaDeviceSynchronize();
+    //cudaError_t cudaerr = cudaDeviceSynchronize();
+    //if (cudaerr != cudaSuccess)
+    //    printf("kernel launch failed with error \"%s\".\n",
+    //           cudaGetErrorString(cudaerr));
+    
+    //printf("done\n");
+    // clean up
+    cudaHostUnregister(d_out);
+    cudaHostUnregister(d_in);
+}
