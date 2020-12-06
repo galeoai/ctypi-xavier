@@ -1,6 +1,7 @@
 CXX=g++
-CFLAGS= -std=c++11 -Wall -I. `pkg-config --cflags opencv4`
-LIBS = `pkg-config --libs opencv4 cuda-10.2`
+CFLAGS = -std=c++11 -Wall -I. `pkg-config --cflags opencv4 hdf5` -I/usr/local/include/
+CFLAGS+= -I/usr/include/hdf5/serial/ # hdf5
+LIBS = `pkg-config --libs opencv4 cuda-10.2 hdf5` -L/usr/local/lib -lhdf5_cpp
 CUDAFLAGS = 
 TARGET = stam
 
