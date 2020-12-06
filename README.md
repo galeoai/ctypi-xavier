@@ -8,5 +8,12 @@
 - hdf5
 
 
-## notes 
-install hdf5 library [link](https://ess-dmsc.github.io/h5cpp/users_guide/installing.html)
+## notes
+
+TODO: find out how to install H5Cpp
+
+### speedup Xavier 
+`
+sudo /usr/sbin/nvpmodel -m 0
+sudo /usr/bin/jetson_clocks
+`
