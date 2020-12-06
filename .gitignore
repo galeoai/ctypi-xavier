@@ -1,2 +1,4 @@
 *.o
 /compile_commands.json
+/.clangd/
+/tmp/
