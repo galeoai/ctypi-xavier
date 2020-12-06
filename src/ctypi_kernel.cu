@@ -80,9 +80,9 @@ __global__ void filter_x(uint16_t *out,
     //};
     #pragma unroll
     for (int j0 = -KERNEL_RADIUS; j0 < KERNEL_RADIUS; ++j0) {
-	//if( ((i0+j0)>=0) && ((i0+j0)<imageW)) {
-	out[i0+imageH*i1] += in[i0+imageH*i1+j0]*c1[KERNEL_RADIUS+j0];
-	//};
+	if( ((i0+j0)>=0) && ((i0+j0)<imageW)) {
+	    out[i0+imageH*i1] += in[i0+imageH*i1+j0]*c1[KERNEL_RADIUS+j0];
+	};
     };
 
 };
@@ -116,3 +116,41 @@ void GPUfilter_x(uint16_t *out, uint16_t *in,int imageW,int imageH){
     cudaHostUnregister(d_out);
     cudaHostUnregister(d_in);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//                                  filter_y                                 //
+///////////////////////////////////////////////////////////////////////////////
+__global__ void filter_y(uint16_t *out,
+			 uint16_t *in,
+			 int imageW,
+			 int imageH)
+{
+    int i0 = blockIdx.x*blockDim.x + threadIdx.x;
+    int i1 = blockIdx.y*blockDim.y + threadIdx.y;
+
+    #pragma unroll
+    for (int j1 = -KERNEL_RADIUS; j1 < KERNEL_RADIUS; ++j1) {
+	if( ((i1+j1)>=0) && ((i1+j1)<imageH)) {
+	    out[i0+imageH*i1] += in[i0+imageH*(i1+j1)];//* c1[KERNEL_RADIUS+j1];
+	};
+    };
+};
+
+
+void GPUfilter_y(uint16_t *out, uint16_t *in,int imageW,int imageH){
+    int size = imageW*imageH;
+    uint16_t *d_out = NULL;
+    cudaHostRegister(out, size*sizeof(uint16_t), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_out, (void *)out, 0);
+    uint16_t *d_in = NULL;
+    cudaHostRegister(in, size*sizeof(uint16_t), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_in, (void *)in, 0);
+
+    dim3 threadsPerBlock(1,512);
+    dim3 numBlocks(imageW/threadsPerBlock.x, imageH/threadsPerBlock.y);
+    
+    filter_y<<<numBlocks,threadsPerBlock>>>(d_out,d_in,imageW,imageH);
+    // clean up
+    cudaHostUnregister(d_out);
+    cudaHostUnregister(d_in);
+};

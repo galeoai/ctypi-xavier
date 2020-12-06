@@ -49,14 +49,15 @@ int main(int argc, char *argv[])
 
     start = std::chrono::high_resolution_clock::now();
     GPUnuc(im2, gain, offset, Width*Height);
-    GPUdiff(out, im1, im2, Width*Height);
-    GPUfilter_x(out, im1, Width, Height);
+    //GPUdiff(out, im1, im2, Width*Height);
+    GPUfilter_x(out, im2, Width, Height);
+    GPUfilter_y(out, im1, Width, Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
 
-    imwrite("../tmp/diff.tif", m_out);
-    imwrite("../tmp/nuc.tif", img2);
+    imwrite("../tmp/x_filter.tif", m_out);
+    imwrite("../tmp/in.tif", img2);
     
     return 0;
 }
