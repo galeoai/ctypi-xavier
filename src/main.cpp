@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "ctypi_base.h"
 #include "ctypi_kernel.h"
+#include "nuc_kernel.h"
 #include <cstdint>
 #include <chrono>
 #include "H5Cpp.h"
@@ -25,13 +26,16 @@ int main(int argc, char *argv[])
     out = m_out.ptr<uint16_t>(0);
 
     //NUC read nuc files
+    float offset[2048*2048], gain[2048*2048];
     H5::H5File fid = H5::H5File("../tmp/nuc_tables.h5",H5F_ACC_RDONLY);
+    // load offset
     H5::DataSet dataset = fid.openDataSet("offset");
     H5::DataSpace dataspace  = dataset.getSpace();
-
-    float offset[2048*2048];
     dataset.read(offset, H5::PredType::NATIVE_FLOAT, dataspace);
-     
+    dataset = fid.openDataSet("gain");
+    dataspace  = dataset.getSpace();
+    dataset.read(gain, H5::PredType::NATIVE_FLOAT, dataspace);
+    
     float dx=0,dy=0;
     int Height = img1.cols;
     int Width = img1.rows;
@@ -44,13 +48,15 @@ int main(int argc, char *argv[])
     printf("cpu: dx=%f, dy=%f ===> duration = %ld[ms] \n",dx, dy, duration.count()/1000);
 
     start = std::chrono::high_resolution_clock::now();
+    GPUnuc(im2, gain, offset, Width*Height);
     GPUdiff(out, im1, im2, Width*Height);
     GPUfilter_x(out, im1, Width, Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
 
-    imwrite("../data/images/diff.tif", m_out);
+    imwrite("../tmp/diff.tif", m_out);
+    imwrite("../tmp/nuc.tif", img2);
     
     return 0;
 }
