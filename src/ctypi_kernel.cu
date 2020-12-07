@@ -67,22 +67,15 @@ __global__ void filter_x(uint16_t *out,
     int i0 = blockIdx.x*blockDim.x + threadIdx.x;
     int i1 = blockIdx.y*blockDim.y + threadIdx.y;
 
-    //copy line to shared memory
-    //int  ind = threadIdx.x;
-    //__shared__ uint16_t tmp[THREADS];
-    //tmp[ind] = in[i0+imageH*i1];
-    //__syncthreads();
-    // 
-    //for (int j0 = -KERNEL_RADIUS; j0 < KERNEL_RADIUS; ++j0) {
-    // 	if( ((ind+j0)>=0) && ((ind+j0)<)) {
-    // 	    out[i0+imageH*i1]+=tmp[ind+j0]*c1[KERNEL_RADIUS+j0];
-    // 	};
-    //};
+    int ii0 = threadIdx.x;
+    // copy pixel value to shared memory
+    __shared__ uint16_t s[THREADS + 2*KERNEL_RADIUS];
+    s[KERNEL_RADIUS + ii0] = in[i0+imageH*i1];
+    __syncthreads();
+
     #pragma unroll
     for (int j0 = -KERNEL_RADIUS; j0 < KERNEL_RADIUS; ++j0) {
-	if( ((i0+j0)>=0) && ((i0+j0)<imageW)) {
-	    out[i0+imageH*i1] += in[i0+imageH*i1+j0]*c1[KERNEL_RADIUS+j0];
-	};
+	out[i0+imageH*i1] += s[KERNEL_RADIUS + ii0 + j0]*c1[KERNEL_RADIUS+j0];
     };
 
 };
@@ -133,8 +126,8 @@ __global__ void filter_y(uint16_t *out,
     __shared__ uint16_t s[THREADS + 2*KERNEL_RADIUS];
     s[KERNEL_RADIUS + ii1] = in[i0+imageH*i1];
     __syncthreads();
-       
-    //#pragma unroll
+
+    #pragma unroll
     for (int j1 = -KERNEL_RADIUS; j1 < KERNEL_RADIUS; ++j1) {
 	out[i1+imageH*i0] += s[KERNEL_RADIUS + ii1 + j1] *
 	                    c1[KERNEL_RADIUS+j1];
