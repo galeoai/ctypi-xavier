@@ -128,11 +128,16 @@ __global__ void filter_y(uint16_t *out,
     int i0 = blockIdx.x*blockDim.x + threadIdx.x;
     int i1 = blockIdx.y*blockDim.y + threadIdx.y;
 
-    #pragma unroll
+    int ii1 = threadIdx.y;
+    // copy pixel value to shared memory
+    __shared__ uint16_t s[THREADS + 2*KERNEL_RADIUS];
+    s[KERNEL_RADIUS + ii1] = in[i0+imageH*i1];
+    __syncthreads();
+       
+    //#pragma unroll
     for (int j1 = -KERNEL_RADIUS; j1 < KERNEL_RADIUS; ++j1) {
-	if( ((i1+j1)>=0) && ((i1+j1)<imageH)) {
-	    out[i0+imageH*i1] += in[i0+imageH*(i1+j1)] * c1[KERNEL_RADIUS+j1];
-	};
+	out[i1+imageH*i0] += s[KERNEL_RADIUS + ii1 + j1] *
+	                    c1[KERNEL_RADIUS+j1];
     };
 };
 
