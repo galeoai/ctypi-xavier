@@ -131,13 +131,13 @@ __global__ void filter_y(uint16_t *out,
     #pragma unroll
     for (int j1 = -KERNEL_RADIUS; j1 < KERNEL_RADIUS; ++j1) {
 	if( ((i1+j1)>=0) && ((i1+j1)<imageH)) {
-	    out[i0+imageH*i1] += in[i0+imageH*(i1+j1)];//* c1[KERNEL_RADIUS+j1];
+	    out[i0+imageH*i1] += in[i0+imageH*(i1+j1)] * c1[KERNEL_RADIUS+j1];
 	};
     };
 };
 
 
-void GPUfilter_y(uint16_t *out, uint16_t *in,int imageW,int imageH){
+void GPUfilter_y(uint16_t *out, uint16_t *in, int imageW, int imageH){
     int size = imageW*imageH;
     uint16_t *d_out = NULL;
     cudaHostRegister(out, size*sizeof(uint16_t), cudaHostRegisterMapped);
