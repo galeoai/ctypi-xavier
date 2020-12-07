@@ -121,16 +121,26 @@ __global__ void filter_y(uint16_t *out,
     int i0 = blockIdx.x*blockDim.x + threadIdx.x;
     int i1 = blockIdx.y*blockDim.y + threadIdx.y;
 
+    int ii0 = threadIdx.x;
     int ii1 = threadIdx.y;
     // copy pixel value to shared memory
-    __shared__ uint16_t s[THREADS + 2*KERNEL_RADIUS];
-    s[KERNEL_RADIUS + ii1] = in[i0+imageH*i1];
+    __shared__ uint16_t s[32][16 + 2*KERNEL_RADIUS];
+    s[ii0][ii1+KERNEL_RADIUS] = in[i0+imageW*i1];
+    // lower
+    if(ii1==0) s[ii0][0] = in[i0+imageW*max(i1-3,0)];
+    if(ii1==1) s[ii0][1] = in[i0+imageW*max(i1-3,0)];
+    if(ii1==2) s[ii0][2] = in[i0+imageW*max(i1-3,0)];
+    // upper
+    if(ii1==13) s[ii0][KERNEL_RADIUS+16+0] = in[i0+imageW*min(i1+3,imageH)];
+    if(ii1==14) s[ii0][KERNEL_RADIUS+16+1] = in[i0+imageW*min(i1+3,imageH)];
+    if(ii1==15) s[ii0][KERNEL_RADIUS+16+2] = in[i0+imageW*min(i1+3,imageH)];
+
     __syncthreads();
 
     #pragma unroll
     for (int j1 = -KERNEL_RADIUS; j1 < KERNEL_RADIUS; ++j1) {
-	out[i1+imageH*i0] += s[KERNEL_RADIUS + ii1 + j1] *
-	                    c1[KERNEL_RADIUS+j1];
+	out[i0+imageW*i1] += s[ii0][ii1+KERNEL_RADIUS+j1] *
+	    c1[KERNEL_RADIUS+j1];
     };
 };
 
@@ -144,7 +154,7 @@ void GPUfilter_y(uint16_t *out, uint16_t *in, int imageW, int imageH){
     cudaHostRegister(in, size*sizeof(uint16_t), cudaHostRegisterMapped);
     cudaHostGetDevicePointer((void **)&d_in, (void *)in, 0);
 
-    dim3 threadsPerBlock(1,512);
+    dim3 threadsPerBlock(32,16);
     dim3 numBlocks(imageW/threadsPerBlock.x, imageH/threadsPerBlock.y);
     
     filter_y<<<numBlocks,threadsPerBlock>>>(d_out,d_in,imageW,imageH);

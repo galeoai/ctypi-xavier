@@ -25,6 +25,11 @@ int main(int argc, char *argv[])
     Mat m_out = Mat::zeros(img1.rows,img1.cols,img1.type());
     out = m_out.ptr<uint16_t>(0);
 
+    uint16_t *out_x;
+    Mat m_out_x = Mat::zeros(img1.rows,img1.cols,img1.type());
+    out_x = m_out_x.ptr<uint16_t>(0);
+
+
     //NUC read nuc files
     float offset[2048*2048], gain[2048*2048];
     H5::H5File fid = H5::H5File("../tmp/nuc_tables.h5",H5F_ACC_RDONLY);
@@ -48,16 +53,17 @@ int main(int argc, char *argv[])
     printf("cpu: dx=%f, dy=%f ===> duration = %ld[ms] \n",dx, dy, duration.count()/1000);
 
     start = std::chrono::high_resolution_clock::now();
-    GPUnuc(im2, gain, offset, Width*Height);
+    GPUnuc(im1, gain, offset, Width*Height);
     //GPUdiff(out, im1, im2, Width*Height);
-    GPUfilter_x(out, im2, Width, Height);
+    GPUfilter_x(out_x, im1, Width, Height);
     GPUfilter_y(out, im1, Width, Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
 
     imwrite("../tmp/y_filter.tif", m_out);
-    imwrite("../tmp/in.tif", img2);
+    imwrite("../tmp/x_filter.tif", m_out_x);
+    imwrite("../tmp/nuc.tif", img1);
     
     return 0;
 }
