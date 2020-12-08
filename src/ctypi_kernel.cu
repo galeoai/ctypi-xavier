@@ -162,3 +162,78 @@ void GPUfilter_y(uint16_t *out, uint16_t *in, int imageW, int imageH){
     cudaHostUnregister(d_out);
     cudaHostUnregister(d_in);
 };
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                                    grad                                   //
+///////////////////////////////////////////////////////////////////////////////
+
+__global__ void grad(int *px, int *py,
+		     uint16_t *im,  int imageW, int imageH){
+    int i0 = blockIdx.x*blockDim.x + threadIdx.x;
+    int i1 = blockIdx.y*blockDim.y + threadIdx.y;
+
+    int ii0 = threadIdx.x;
+    int ii1 = threadIdx.y;
+    // copy pixel value to shared memory
+    __shared__ uint16_t s[32 + 2][16 + 2];
+    s[ii0+1][ii1+1] = im[i0+imageW*i1];
+
+    if(ii0==0)	s[0][ii1+1]  = im[i0-1+imageW*i1];
+    if(ii0==31) s[33][ii1+1] = im[i0+1+imageW*i1];
+    if(ii1==0)	s[ii0+1][0]  = im[i0+imageW*(i1-1)];
+    if(ii1==15) s[ii0+1][17] = im[i0+imageW*(i1+1)];
+
+    __syncthreads();
+
+    px[i0+imageW*i1] = (s[ii0+1+1][ii1+1] - s[ii0+1-1][ii1+1])/2;
+    py[i0+imageW*i1] = (s[ii0+1][ii1+1+1] - s[ii0+1][ii1+1-1])/2;
+};
+
+void GPUgrad(int *px, int *py, uint16_t *im, int imageW, int imageH){
+    int size = imageW*imageH;
+    int *d_px = NULL;
+    cudaHostRegister(px, size*sizeof(int), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_px, (void *)px, 0);
+    int *d_py = NULL;
+    cudaHostRegister(py, size*sizeof(int), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_py, (void *)py, 0);
+    uint16_t *d_im = NULL;
+    cudaHostRegister(im, size*sizeof(uint16_t), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_im, (void *)im, 0);
+
+    dim3 threadsPerBlock(32,16);
+    dim3 numBlocks(imageW/threadsPerBlock.x, imageH/threadsPerBlock.y);
+
+    grad<<<numBlocks,threadsPerBlock>>>(d_px, d_py, d_im, imageW, imageH);
+
+    // clean up
+    cudaHostUnregister(d_px);
+    cudaHostUnregister(d_py);
+    cudaHostUnregister(d_im);
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//                                    sum                                    //
+///////////////////////////////////////////////////////////////////////////////
+
+__global__ void sum(int *res, uint16_t *im,  int size){
+    return;
+};
+
+void GPUsum(int *res, uint16_t *im,  int size){
+    int *d_res = NULL;
+    cudaHostRegister(res, size*sizeof(int), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_res, (void *)res, 0);
+    uint16_t *d_im = NULL;
+    cudaHostRegister(im, size*sizeof(uint16_t), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_im, (void *)im, 0);
+
+    int threadsPerBlock = THREADS;
+    int blocksPerGrid =(size + threadsPerBlock - 1) / threadsPerBlock;
+
+    sum<<<blocksPerGrid,threadsPerBlock>>>(d_res, d_im, size);
+
+    // clean up
+    cudaHostUnregister(d_im);
+};
