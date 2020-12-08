@@ -1,8 +1,8 @@
 #include <cstdint>
 
-
-
-void ctypi_v3_base(float dx,float dy, uint16_t *im1, uint16_t *im2, int Height, int Width){
+void ctypi_v3_base(float dx,float dy,
+		   uint16_t *im1, uint16_t *im2,
+		   int Height, int Width){
     const double c1[7] = {
 	0.0116850998497429921230139626686650444753468036651611328125,
 	-0.0279730819380002923568717676516826031729578971862792968750,
@@ -20,12 +20,12 @@ void ctypi_v3_base(float dx,float dy, uint16_t *im1, uint16_t *im2, int Height, 
 		{
 		    tmpABtx = 0; tmpABty = 0; tmp_px = 0; tmp_py = 0;
 		    for (auto j0 = -ind_off; j0 <= ind_off; ++j0) {
-			tmpABtx += (im1[(i0 + j0) * Height + i1] -
-				    im2[(i0 + j0) * Height + i1]) * c1[j0 + ind_off];
+			tmpABtx += (im1[(i0+j0)*Height+i1] -
+				    im2[(i0+j0)*Height+i1])*c1[j0+ind_off];
 		    }
 		    for (auto j1 = -ind_off; j1 <= ind_off; ++j1) {
-			tmpABty += (im1[(i0)*Height + i1 + j1] -
-				    im2[(i0)*Height + i1 + j1]) * c1[j1 + ind_off];
+			tmpABty += (im1[(i0)*Height+i1+j1]-
+				    im2[(i0)*Height+i1+j1])*c1[j1+ind_off];
 		    }
 		    tmp_py = im1[(i0)*Height + i1 + 1]/2 -
 			im1[(i0)*Height + i1 - 1]/2;
