@@ -64,16 +64,18 @@ int main(int argc, char *argv[])
     //GPUdiff(out, im1, im2, Width*Height);
     //GPUfilter_x(out_x, im1, Width, Height);
     //GPUfilter_y(out, im1, Width, Height);
-    GPUgrad(px, py, im1, Width, Height);
+    //GPUgrad(px, py, im1, Width, Height);
+    GPUsum(px, im1, Width*Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
 
+    printf("ans = %d \n", px[0]);
     //imwrite("../tmp/y_filter.tif", m_out);
     //imwrite("../tmp/x_filter.tif", m_out_x);
-    imwrite("../tmp/px.tif", m_px);
-    imwrite("../tmp/py.tif", m_py);
-    imwrite("../tmp/nuc.tif", img1);
+    //imwrite("../tmp/px.tif", m_px);
+    //imwrite("../tmp/py.tif", m_py);
+    //imwrite("../tmp/nuc.tif", img1);
     
     return 0;
 }

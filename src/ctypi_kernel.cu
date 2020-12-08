@@ -218,7 +218,31 @@ void GPUgrad(int *px, int *py, uint16_t *im, int imageW, int imageH){
 ///////////////////////////////////////////////////////////////////////////////
 
 __global__ void sum(int *res, uint16_t *im,  int size){
-    return;
+    extern __shared__ int sdata[512];
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x*(512*2) + tid;
+    unsigned int gridSize =  512*2*gridDim.x;
+    sdata[tid] = 0;
+    while (i < size) {
+	sdata[tid] += im[i] + im[i+512];
+	i += gridSize;
+    }
+    __syncthreads();
+
+    if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads();
+    if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads();
+    if (tid <  64) { sdata[tid] += sdata[tid +	64]; } __syncthreads();
+
+    if (tid < 32) {
+	sdata[tid] += sdata[tid +  32];
+	sdata[tid] += sdata[tid +  16];
+	sdata[tid] += sdata[tid +  8];
+	sdata[tid] += sdata[tid +  4];
+	sdata[tid] += sdata[tid +  2];
+	sdata[tid] += sdata[tid +  1];
+    };
+
+    if (tid == 0) res[blockIdx.x] = sdata[0];
 };
 
 void GPUsum(int *res, uint16_t *im,  int size){
