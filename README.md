@@ -1,4 +1,5 @@
 # Ctypi-Cuda
+Implementation of ctypi algorithm using CUDA on Xavier
 
 ## Description 
 
@@ -10,10 +11,14 @@
 
 ## notes
 
-TODO: find out how to install H5Cpp
+### Segmentation fault (core dumped)
+
+```bash
+ulimit -s unlimited
+```
 
 ### speedup Xavier 
-`
-sudo /usr/sbin/nvpmodel -m 0
+```bash
+sudo /usr/sbin/nvpmodel -m 0 
 sudo /usr/bin/jetson_clocks
-`
+```
