@@ -21,9 +21,10 @@ int main(int argc, char *argv[])
     im2 = img2.ptr<uint16_t>(0);
 
     // gen output image
-    uint16_t *out;
-    Mat m_out = Mat::zeros(img1.rows,img1.cols,img1.type());
-    out = m_out.ptr<uint16_t>(0);
+    int *out;
+    Mat m_out = Mat::ones(img1.rows,img1.cols,CV_32S);
+    out = m_out.ptr<int>(0);
+    
 
     uint16_t *out_x;
     Mat m_out_x = Mat::zeros(img1.rows,img1.cols,img1.type());
@@ -60,17 +61,16 @@ int main(int argc, char *argv[])
     printf("cpu: dx=%f, dy=%f ===> duration = %ld[ms] \n",dx, dy, duration.count()/1000);
 
     start = std::chrono::high_resolution_clock::now();
-    GPUnuc(im1, gain, offset, Width*Height);
+    //GPUnuc(im1, gain, offset, Width*Height);
     //GPUdiff(out, im1, im2, Width*Height);
     //GPUfilter_x(out_x, im1, Width, Height);
     //GPUfilter_y(out, im1, Width, Height);
     //GPUgrad(px, py, im1, Width, Height);
-    GPUsum(px, im1, Width*Height);
+    int ans = GPUsum(out, Width*Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
-
-    printf("ans = %d \n", px[0]);
+    printf("results = %d \n", ans);
     //imwrite("../tmp/y_filter.tif", m_out);
     //imwrite("../tmp/x_filter.tif", m_out_x);
     //imwrite("../tmp/px.tif", m_px);

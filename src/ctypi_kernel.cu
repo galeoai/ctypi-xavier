@@ -217,8 +217,17 @@ void GPUgrad(int *px, int *py, uint16_t *im, int imageW, int imageH){
 //                                    sum                                    //
 ///////////////////////////////////////////////////////////////////////////////
 
-__global__ void sum(int *res, uint16_t *im,  int size){
-    extern __shared__ int sdata[512];
+__device__ void warpReduce(volatile int *sdata, unsigned int tid) {
+    sdata[tid] += sdata[tid + 32];
+    sdata[tid] += sdata[tid + 16];
+    sdata[tid] += sdata[tid +  8];
+    sdata[tid] += sdata[tid +  4];
+    sdata[tid] += sdata[tid +  2];
+    sdata[tid] += sdata[tid +  1];
+};
+
+__global__ void sum(int *res, int *im,  int size){
+    __shared__ int sdata[512];
     unsigned int tid = threadIdx.x;
     unsigned int i = blockIdx.x*(512*2) + tid;
     unsigned int gridSize =  512*2*gridDim.x;
@@ -228,36 +237,43 @@ __global__ void sum(int *res, uint16_t *im,  int size){
 	i += gridSize;
     }
     __syncthreads();
-
     if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads();
     if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads();
     if (tid <  64) { sdata[tid] += sdata[tid +	64]; } __syncthreads();
-
-    if (tid < 32) {
-	sdata[tid] += sdata[tid +  32];
-	sdata[tid] += sdata[tid +  16];
-	sdata[tid] += sdata[tid +  8];
-	sdata[tid] += sdata[tid +  4];
-	sdata[tid] += sdata[tid +  2];
-	sdata[tid] += sdata[tid +  1];
-    };
-
+    
+    if (tid < 32) warpReduce(sdata, tid);
+    
     if (tid == 0) res[blockIdx.x] = sdata[0];
 };
 
-void GPUsum(int *res, uint16_t *im,  int size){
-    int *d_res = NULL;
-    cudaHostRegister(res, size*sizeof(int), cudaHostRegisterMapped);
-    cudaHostGetDevicePointer((void **)&d_res, (void *)res, 0);
-    uint16_t *d_im = NULL;
-    cudaHostRegister(im, size*sizeof(uint16_t), cudaHostRegisterMapped);
+int GPUsum(int *im,  int size){
+    int *d_im = NULL;
+    cudaHostRegister(im, size*sizeof(int), cudaHostRegisterMapped);
     cudaHostGetDevicePointer((void **)&d_im, (void *)im, 0);
-
+    
     int threadsPerBlock = THREADS;
     int blocksPerGrid =(size + threadsPerBlock - 1) / threadsPerBlock;
 
-    sum<<<blocksPerGrid,threadsPerBlock>>>(d_res, d_im, size);
-
+    int *d_tmp;
+    cudaMalloc((void **)&d_tmp,blocksPerGrid*sizeof(int));
+    int *d_res;
+    cudaMalloc((void **)&d_res,1*sizeof(int));
+    int res = INT_MIN; //init with "error" number 
+    
+    sum<<<blocksPerGrid, threadsPerBlock>>>(d_tmp, d_im, size);
+    sum<<<1, threadsPerBlock>>>(d_res, d_tmp, blocksPerGrid);
+    
+    cudaDeviceSynchronize();
+    // copy results back to the cpu
+    cudaMemcpy(&res, d_res, 1*sizeof(int), cudaMemcpyDeviceToHost);
     // clean up
     cudaHostUnregister(d_im);
+    cudaHostUnregister(d_tmp);
+    cudaHostUnregister(d_res);
+    
+    return res;
 };
+
+///////////////////////////////////////////////////////////////////////////////
+//                                    dot                                    //
+///////////////////////////////////////////////////////////////////////////////
