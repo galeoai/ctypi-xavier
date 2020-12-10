@@ -277,3 +277,54 @@ int GPUsum(int *im,  int size){
 ///////////////////////////////////////////////////////////////////////////////
 //                                    dot                                    //
 ///////////////////////////////////////////////////////////////////////////////
+__global__ void dot(int *res, int *im1, int *im2, int size){
+    __shared__ int sdata[512];
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x*(512*2) + tid;
+    unsigned int gridSize =  512*2*gridDim.x;
+    sdata[tid] = 0;
+    while (i < size) {
+	sdata[tid] += im1[i]*im2[i] + im1[i+512]*im2[i+512];
+	i += gridSize;
+    }
+    __syncthreads();
+    if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads();
+    if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads();
+    if (tid <  64) { sdata[tid] += sdata[tid +	64]; } __syncthreads();
+    
+    if (tid < 32) warpReduce(sdata, tid);
+    
+    if (tid == 0) res[blockIdx.x] = sdata[0];
+};
+
+int GPUdot(int *im1, int *im2,  int size){
+    int *d_im1 = NULL;
+    cudaHostRegister(im1, size*sizeof(int), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_im1, (void *)im1, 0);
+    int *d_im2 = NULL;
+    cudaHostRegister(im2, size*sizeof(int), cudaHostRegisterMapped);
+    cudaHostGetDevicePointer((void **)&d_im2, (void *)im2, 0);
+    
+    int threadsPerBlock = THREADS;
+    int blocksPerGrid =(size + threadsPerBlock - 1) / threadsPerBlock;
+
+    int *d_tmp;
+    cudaMalloc((void **)&d_tmp,blocksPerGrid*sizeof(int));
+    int *d_res;
+    cudaMalloc((void **)&d_res,1*sizeof(int));
+    int res = INT_MIN; //init with "error" number 
+    
+    dot<<<blocksPerGrid, threadsPerBlock>>>(d_tmp, d_im1, d_im2, size);
+    sum<<<1, threadsPerBlock>>>(d_res, d_tmp, blocksPerGrid);
+    
+    cudaDeviceSynchronize();
+    // copy results back to the cpu
+    cudaMemcpy(&res, d_res, 1*sizeof(int), cudaMemcpyDeviceToHost);
+    // clean up
+    cudaHostUnregister(d_im1);
+    cudaHostUnregister(d_im2);
+    cudaHostUnregister(d_tmp);
+    cudaHostUnregister(d_res);
+    
+    return res;
+};

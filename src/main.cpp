@@ -23,7 +23,14 @@ int main(int argc, char *argv[])
     // gen output image
     int *out;
     Mat m_out = Mat::ones(img1.rows,img1.cols,CV_32S);
+    m_out *= -3;
     out = m_out.ptr<int>(0);
+
+    int *out_1;
+    Mat m_out_1 = Mat::ones(img1.rows,img1.cols,CV_32S);
+    m_out_1 *= 4;
+    out_1 = m_out_1.ptr<int>(0);
+
     
 
     uint16_t *out_x;
@@ -66,7 +73,8 @@ int main(int argc, char *argv[])
     //GPUfilter_x(out_x, im1, Width, Height);
     //GPUfilter_y(out, im1, Width, Height);
     //GPUgrad(px, py, im1, Width, Height);
-    int ans = GPUsum(out, Width*Height);
+    //int ans = GPUsum(out, Width*Height);
+    int ans = GPUdot(out, out_1, Width*Height);
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     printf("GPUdiff: ===> duration = %ld[ms] \n", duration.count()/1000);
